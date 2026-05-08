@@ -12,6 +12,23 @@ from app.services.paths import get_data_dir, sqlite_url
 import app.db.models  # noqa: F401  — register ORM mappers with Base.metadata
 
 
+def _ensure_sqlite_interview_source_columns(engine) -> None:
+    """旧版 SQLite 补全 interview_sources.embedding_model。"""
+    if engine.dialect.name != "sqlite":
+        return
+    with engine.begin() as conn:
+        r = conn.execute(text("PRAGMA table_info(interview_sources)"))
+        existing = {row[1] for row in r.fetchall()}
+        if not existing:
+            return
+        if "embedding_model" not in existing:
+            conn.execute(
+                text(
+                    "ALTER TABLE interview_sources ADD COLUMN embedding_model VARCHAR(512)"
+                )
+            )
+
+
 def _ensure_sqlite_job_posting_columns(engine) -> None:
     """旧版 SQLite 在加模型列后不会自动 ALTER，补全 job_postings 列。"""
     if engine.dialect.name != "sqlite":
@@ -38,6 +55,7 @@ def make_engine(database_url: str | None = None):
     eng = create_engine(url, connect_args={"check_same_thread": False})
     Base.metadata.create_all(bind=eng)
     _ensure_sqlite_job_posting_columns(eng)
+    _ensure_sqlite_interview_source_columns(eng)
     return eng
 
 

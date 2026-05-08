@@ -11,6 +11,9 @@ dependencies = [
   "trafilatura>=1.6.0",
   "chromadb>=0.5.0",
   "openai>=1.0.0",
+  "FlagEmbedding>=1.2.0",
+  "torch>=2.0.0",
+  "langgraph>=1.0.0",
 ]
 
 [project.optional-dependencies]

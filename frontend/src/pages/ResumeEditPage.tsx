@@ -18,6 +18,7 @@ export function ResumeEditPage() {
   const { id } = useParams<{ id: string }>();
   const rid = Number(id);
   const [row, setRow] = useState<Resume | null>(null);
+  const [titleDraft, setTitleDraft] = useState("");
   const [md, setMd] = useState("");
   const [jobs, setJobs] = useState<Job[]>([]);
   const [jobId, setJobId] = useState<number | "">("");
@@ -28,6 +29,7 @@ export function ResumeEditPage() {
       try {
         const r = await apiGet<Resume>(`/api/resumes/${rid}`);
         setRow(r);
+        setTitleDraft(r.title);
         setMd(r.current_body_md);
         const j = await apiGet<Job[]>("/api/jobs/");
         setJobs(j);
@@ -40,11 +42,17 @@ export function ResumeEditPage() {
   async function save() {
     setErr(null);
     try {
-      await apiSend(`/api/resumes/${rid}`, {
+      const updated = await apiSend<Resume>(`/api/resumes/${rid}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ current_body_md: md, title: row?.title }),
+        body: JSON.stringify({
+          current_body_md: md,
+          title: titleDraft,
+        }),
       });
+      setRow(updated);
+      setTitleDraft(updated.title);
+      setMd(updated.current_body_md);
     } catch (e) {
       setErr(String(e));
     }
@@ -63,6 +71,8 @@ export function ResumeEditPage() {
         body: JSON.stringify({ job_id: jobId, top_k: 8 }),
       });
       const r = await apiGet<Resume>(`/api/resumes/${rid}`);
+      setRow(r);
+      setTitleDraft(r.title);
       setMd(r.current_body_md);
     } catch (e) {
       setErr(String(e));
@@ -83,8 +93,25 @@ export function ResumeEditPage() {
       <p>
         <Link to="/resumes">← 列表</Link>
       </p>
-      <h1>{row.title || `简历 #${rid}`}</h1>
+      <h1>{titleDraft.trim() || `简历 #${rid}`}</h1>
       {err ? <p className="err">{err}</p> : null}
+
+      <div className="card resume-edit-name">
+        <label htmlFor="resume-title">简历名称</label>
+        <input
+          id="resume-title"
+          type="text"
+          autoComplete="off"
+          placeholder="例如：互联网大厂通用版"
+          value={titleDraft}
+          onChange={(e) => setTitleDraft(e.target.value)}
+          maxLength={255}
+        />
+        <p className="resume-list-page__hint">
+          修改名称后点击页面底部「保存」会同步到列表与本地数据。
+        </p>
+      </div>
+
       <div className="card" style={{ marginBottom: "1rem" }}>
         <label htmlFor="job">一键优化 · 选择岗位</label>
         <select
@@ -112,7 +139,7 @@ export function ResumeEditPage() {
       </div>
       <div style={{ marginTop: "0.75rem" }}>
         <button type="button" className="primary" onClick={save}>
-          保存正文
+          保存名称与正文
         </button>
       </div>
       <Disclaimer />

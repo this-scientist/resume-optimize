@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from datetime import datetime
+
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 
@@ -26,6 +28,22 @@ class InterviewSourceRead(BaseModel):
     body_preview: str
     fetch_status: str
     index_status: str
+    created_at: datetime
+    embedding_model: str | None = None
+
+
+class InterviewSourceDetail(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    kind: str
+    url: str | None
+    title: str | None
+    body_md: str
+    fetch_status: str
+    index_status: str
+    created_at: datetime
+    embedding_model: str | None = None
 
 
 class InterviewSourceConfirmResult(BaseModel):

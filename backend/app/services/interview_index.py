@@ -7,20 +7,24 @@ from sqlalchemy.orm import Session
 from app.db import models
 from app.services import chroma_store
 from app.services.chunk_text import chunk_text
-from app.services.embeddings import embed_chunks
+from app.services.embeddings import embed_corpus
 
 
-def delete_by_source_id(source_id: int | str, *, data_dir: Path | None = None) -> None:
-    chroma_store.delete_by_source_id(data_dir, source_id)
+def delete_by_source_id(
+    source_id: int | str,
+    *,
+    data_dir: Path | None = None,
+    embedding_model: str | None = None,
+) -> None:
+    chroma_store.delete_by_source_id(data_dir, source_id, embedding_model)
 
 
 def index_source(
     db: Session,
     source_id: int,
     *,
-    api_key: str,
-    base_url: str | None,
     model: str,
+    use_fp16: bool = True,
     data_dir: Path | None = None,
 ) -> None:
     src = db.get(models.InterviewSource, source_id)
@@ -34,9 +38,9 @@ def index_source(
     if not chunks:
         raise ValueError("no chunks produced")
 
-    vectors = embed_chunks(chunks, api_key=api_key, base_url=base_url, model=model)
+    vectors = embed_corpus(chunks, model=model, use_fp16=use_fp16)
 
-    chroma_store.delete_by_source_id(data_dir, source_id)
+    chroma_store.delete_by_source_id(data_dir, source_id, src.embedding_model)
 
     source_type = "interview_url" if src.kind == "url" else "interview_note"
     chroma_store.add_interview_chunks(
@@ -45,6 +49,8 @@ def index_source(
         embeddings=vectors,
         source_type=source_type,
         source_id=source_id,
+        model_name=model,
     )
 
     src.index_status = "indexed"
+    src.embedding_model = model.strip()

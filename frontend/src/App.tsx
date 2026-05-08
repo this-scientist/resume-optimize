@@ -2,7 +2,10 @@ import type { ReactNode } from "react";
 import { Link, Navigate, Route, Routes } from "react-router-dom";
 import { JobDetailPage } from "./pages/JobDetailPage";
 import { JobsPage } from "./pages/JobsPage";
-import { KnowledgePage } from "./pages/KnowledgePage";
+import { KnowledgeDetailPage } from "./pages/KnowledgeDetailPage";
+import { KnowledgeImportPage } from "./pages/KnowledgeImportPage";
+import { KnowledgeListPage } from "./pages/KnowledgeListPage";
+import { KnowledgePastePage } from "./pages/KnowledgePastePage";
 import { ResumeEditPage } from "./pages/ResumeEditPage";
 import { ResumeListPage } from "./pages/ResumeListPage";
 import { SettingsPage } from "./pages/SettingsPage";
@@ -26,7 +29,10 @@ export default function App() {
     <Layout>
       <Routes>
         <Route path="/" element={<Navigate to="/resumes" replace />} />
-        <Route path="/knowledge" element={<KnowledgePage />} />
+        <Route path="/knowledge/import" element={<KnowledgeImportPage />} />
+        <Route path="/knowledge/paste" element={<KnowledgePastePage />} />
+        <Route path="/knowledge/:id" element={<KnowledgeDetailPage />} />
+        <Route path="/knowledge" element={<KnowledgeListPage />} />
         <Route path="/resumes" element={<ResumeListPage />} />
         <Route path="/resumes/:id" element={<ResumeEditPage />} />
         <Route path="/jobs" element={<JobsPage />} />

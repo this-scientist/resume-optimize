@@ -91,7 +91,10 @@ export function SettingsPage() {
         />
       </div>
       <div className="card">
-        <h3>Embedding</h3>
+        <h3>Embedding（本地 BGE / FlagEmbedding）</h3>
+        <p style={{ color: "#666", fontSize: "0.9rem" }}>
+          填写 Hugging Face 模型名即可（如 BAAI/bge-small-zh-v1.5），首次使用会下载权重；下方 Base URL / API Key 不再参与向量计算。
+        </p>
         <label>Base URL</label>
         <input
           value={form.embedding_base_url}

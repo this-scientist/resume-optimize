@@ -5,15 +5,11 @@ from sqlalchemy.orm import Session
 from app.config import Settings
 from app.db import models
 from app.services import chroma_store
-from app.services.embeddings import embed_chunks
+from app.services.embeddings import embed_queries
 from app.services.paths import get_data_dir
 from app.services.token_budget import clip_chunks
-from app.services.chat_models import complete_chat
+from app.services.optimize_graph import run_optimize_graph
 from app.services.user_config import effective_chat_config, effective_embedding_config
-
-SYSTEM_PROMPT = """你是一名中文简历优化助手。根据岗位描述 JD、检索到的面试相关知识片段与用户当前简历 Markdown，
-输出一版完整、可直接投递的新简历正文（Markdown）。
-保持事实一致，可强化措辞与结构；不要编造未经历的项目。"""
 
 CLIP_MAX_CHARS = 4000
 
@@ -58,8 +54,9 @@ def optimize_resume(
     if not jd:
         raise ValueError("job jd_text is empty")
 
-    emb_key, emb_base, emb_model = effective_embedding_config(settings)
-    if not emb_key or not emb_model:
+    _, _, emb_model = effective_embedding_config(settings)
+    emb_model = emb_model.strip()
+    if not emb_model:
         raise ValueError("embedding not configured")
 
     chat_key, chat_base, chat_model = effective_chat_config(settings)
@@ -67,24 +64,29 @@ def optimize_resume(
         raise ValueError("chat not configured")
 
     query_text = (resume.current_body_md or "").strip() or jd[:800]
-    qvec = embed_chunks([query_text], api_key=emb_key, base_url=emb_base, model=emb_model)[0]
+    qvec = embed_queries(
+        [query_text],
+        model=emb_model,
+        use_fp16=settings.embedding_use_fp16,
+    )[0]
 
     data_dir = get_data_dir()
     raw = chroma_store.query_by_embedding(
         data_dir,
         query_embedding=qvec,
         n_results=top_k,
+        model_name=emb_model,
         where=None,
     )
 
     docs = (raw.get("documents") or [[]])[0] or []
     merged = clip_chunks(docs, CLIP_MAX_CHARS)
 
-    user_msg = build_optimize_user_message(jd, merged, resume.current_body_md or "", extra_instructions)
-
-    body = complete_chat(
-        system=SYSTEM_PROMPT,
-        user=user_msg,
+    body = run_optimize_graph(
+        jd_text=jd,
+        resume_md=resume.current_body_md or "",
+        retrieved_context=merged,
+        extra_instructions=extra_instructions,
         api_key=chat_key,
         base_url=chat_base,
         model=chat_model,

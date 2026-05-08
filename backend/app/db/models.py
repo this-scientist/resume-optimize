@@ -73,4 +73,5 @@ class InterviewSource(Base):
     body_md: Mapped[str] = mapped_column(Text, default="")
     fetch_status: Mapped[str] = mapped_column(String(16), default="ok")
     index_status: Mapped[str] = mapped_column(String(16), default="pending")  # pending | indexed | failed
+    embedding_model: Mapped[str | None] = mapped_column(String(512), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)

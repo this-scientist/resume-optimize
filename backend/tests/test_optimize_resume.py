@@ -27,8 +27,7 @@ def test_build_optimize_user_message_includes_sections():
 
 
 def test_optimize_endpoint_mocked(client, monkeypatch):
-    monkeypatch.setenv("RESUME_OPTIMIZER_EMBEDDING_API_KEY", "ek")
-    monkeypatch.setenv("RESUME_OPTIMIZER_EMBEDDING_MODEL", "em")
+    monkeypatch.setenv("RESUME_OPTIMIZER_EMBEDDING_MODEL", "BAAI/bge-small-zh-v1.5")
     monkeypatch.setenv("RESUME_OPTIMIZER_CHAT_API_KEY", "ck")
     monkeypatch.setenv("RESUME_OPTIMIZER_CHAT_MODEL", "cm")
 
@@ -44,7 +43,7 @@ def test_optimize_endpoint_mocked(client, monkeypatch):
     ).json()["id"]
 
     monkeypatch.setattr(
-        "app.services.optimize_resume.embed_chunks",
+        "app.services.optimize_resume.embed_queries",
         lambda texts, **kw: [[0.1, 0.2, 0.3] for _ in texts],
     )
     monkeypatch.setattr(
@@ -52,7 +51,7 @@ def test_optimize_endpoint_mocked(client, monkeypatch):
         lambda *a, **k: {"documents": [["检索片段A", "检索片段B"]]},
     )
     monkeypatch.setattr(
-        "app.services.optimize_resume.complete_chat",
+        "app.services.optimize_graph.complete_chat",
         lambda **kw: "# 优化后的简历\n\n- 技能",
     )
 
