@@ -36,7 +36,12 @@ def get_settings_payload(settings: Settings = Depends(get_settings)):
 
 @router.put("/", response_model=SettingsRead)
 def put_settings_payload(body: SettingsPayload, settings: Settings = Depends(get_settings)):
+    prev = load_settings_json()
     data = body.model_dump()
+    if not (data.get("chat_api_key") or "").strip():
+        data["chat_api_key"] = prev.get("chat_api_key", "")
+    if not (data.get("embedding_api_key") or "").strip():
+        data["embedding_api_key"] = prev.get("embedding_api_key", "")
     save_settings_json(data)
     merged = _merge_defaults(settings, data)
     return SettingsRead(
