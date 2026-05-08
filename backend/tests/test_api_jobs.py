@@ -43,6 +43,36 @@ def test_create_job_requires_valid_url(client):
     assert r.status_code == 422
 
 
+def test_patch_job_manual_fields(client, monkeypatch):
+    monkeypatch.setattr("app.services.fetch_html.fetch_and_extract", fake_fetch_ok)
+
+    jid = client.post(
+        "/api/jobs/",
+        json={"jd_source_url": "https://example.com/job/patch"},
+    ).json()["id"]
+
+    r = client.patch(
+        f"/api/jobs/{jid}",
+        json={
+            "company": "手填公司",
+            "title": "手填职位",
+            "salary": "40k",
+            "published_at": "2024-06-01T00:00:00",
+            "jd_source_url": "https://example.com/other-job",
+            "jd_fetch_status": "failed",
+            "jd_text": "手工粘贴的 JD 全文",
+        },
+    )
+    assert r.status_code == 200
+    o = r.json()
+    assert o["company"] == "手填公司"
+    assert o["title"] == "手填职位"
+    assert o["salary"] == "40k"
+    assert o["jd_fetch_status"] == "failed"
+    assert "手工粘贴" in o["jd_text"]
+    assert o["jd_source_url"] == "https://example.com/other-job"
+
+
 def test_put_pipeline_resets_invalid_stage(client, monkeypatch):
     monkeypatch.setattr("app.services.fetch_html.fetch_and_extract", fake_fetch_ok)
 

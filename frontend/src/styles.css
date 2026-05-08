@@ -485,3 +485,47 @@ button.primary:disabled {
 .job-meta-grid__full dd {
   word-break: break-all;
 }
+
+.job-detail-page__lede {
+  margin: 0 0 1rem;
+  font-size: 0.95rem;
+  color: var(--color-ink-muted);
+  max-width: 42rem;
+}
+
+.job-detail-page__ok {
+  margin: 0 0 0.75rem;
+  padding: 0.5rem 0.75rem;
+  border-radius: 8px;
+  background: #e8f5e9;
+  color: #1b5e20;
+  font-size: 0.92rem;
+}
+
+.job-detail-form {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 1rem 1.25rem;
+}
+
+.job-detail-form__field label {
+  margin-bottom: 0.35rem;
+}
+
+.job-detail-form__field--full {
+  grid-column: 1 / -1;
+}
+
+.job-detail-form__field .resume-list-page__hint {
+  display: block;
+  margin-top: 0.35rem;
+  font-weight: 400;
+}
+
+.job-detail-edit__actions {
+  margin-top: 1.1rem;
+}
+
+.job-detail-edit .primary {
+  min-height: 44px;
+}

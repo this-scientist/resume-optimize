@@ -26,8 +26,31 @@ class JobPatch(BaseModel):
     salary: str | None = None
     published_at: datetime | None = None
     jd_text: str | None = None
+    jd_source_url: str | None = None
+    jd_fetch_status: str | None = None
     resume_id: int | None = None
     current_stage_id: int | None = None
+
+    @field_validator("jd_source_url")
+    @classmethod
+    def jd_url_optional(cls, v: str | None) -> str | None:
+        if v is None:
+            return None
+        s = v.strip()
+        if not s:
+            return None
+        if not s.startswith(("http://", "https://")):
+            raise ValueError("jd_source_url 须为 http(s) 链接或留空")
+        return s
+
+    @field_validator("jd_fetch_status")
+    @classmethod
+    def fetch_status_enum(cls, v: str | None) -> str | None:
+        if v is None:
+            return None
+        if v not in ("ok", "failed"):
+            raise ValueError("jd_fetch_status 只能为 ok 或 failed")
+        return v
 
 
 class PipelinePut(BaseModel):

@@ -16,34 +16,52 @@ type Job = {
   current_stage_id: number | null;
 };
 
-function formatPublished(iso: string | null): string {
-  if (!iso) return "—";
-  try {
-    const d = new Date(iso);
-    if (Number.isNaN(d.getTime())) return "—";
-    return d.toLocaleDateString("zh-CN");
-  } catch {
-    return "—";
-  }
-}
-
 type Resume = { id: number; title: string };
+
+function toDateInputValue(iso: string | null): string {
+  if (!iso) return "";
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "";
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
 
 export function JobDetailPage() {
   const { id } = useParams<{ id: string }>();
   const jid = Number(id);
   const [job, setJob] = useState<Job | null>(null);
   const [resumes, setResumes] = useState<Resume[]>([]);
-  const [jd, setJd] = useState("");
   const [stages, setStages] = useState("笔试\n一面\n二面");
   const [err, setErr] = useState<string | null>(null);
+  const [okMsg, setOkMsg] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+
+  const [company, setCompany] = useState("");
+  const [title, setTitle] = useState("");
+  const [salary, setSalary] = useState("");
+  const [publishedDate, setPublishedDate] = useState("");
+  const [jdSourceUrl, setJdSourceUrl] = useState("");
+  const [fetchStatus, setFetchStatus] = useState<"ok" | "failed">("failed");
+  const [jdText, setJdText] = useState("");
+  const [resumeId, setResumeId] = useState<number | "">("");
+  const [currentStageId, setCurrentStageId] = useState<number | "">("");
 
   useEffect(() => {
     void (async () => {
       try {
         const j = await apiGet<Job>(`/api/jobs/${jid}`);
         setJob(j);
-        setJd(j.jd_text);
+        setCompany(j.company);
+        setTitle(j.title);
+        setSalary(j.salary);
+        setPublishedDate(toDateInputValue(j.published_at));
+        setJdSourceUrl(j.jd_source_url ?? "");
+        setFetchStatus(j.jd_fetch_status === "ok" ? "ok" : "failed");
+        setJdText(j.jd_text);
+        setResumeId(j.resume_id ?? "");
+        setCurrentStageId(j.current_stage_id ?? "");
         const rs = await apiGet<Resume[]>("/api/resumes/");
         setResumes(rs);
       } catch (e) {
@@ -52,37 +70,54 @@ export function JobDetailPage() {
     })();
   }, [jid]);
 
-  async function saveJd() {
-    if (!job) return;
-    setErr(null);
-    try {
-      const updated = await apiSend<Job>(`/api/jobs/${jid}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ jd_text: jd }),
-      });
-      setJob(updated);
-    } catch (e) {
-      setErr(String(e));
-    }
+  function publishedAtPayload(): string | null {
+    if (!publishedDate.trim()) return null;
+    return `${publishedDate.trim()}T00:00:00`;
   }
 
-  async function linkResume(rid: number | "") {
+  async function saveJobFields() {
     setErr(null);
+    setOkMsg(null);
+    setSaving(true);
     try {
+      const body: Record<string, unknown> = {
+        company,
+        title,
+        salary,
+        published_at: publishedAtPayload(),
+        jd_text: jdText,
+        jd_source_url: jdSourceUrl.trim() || null,
+        jd_fetch_status: fetchStatus,
+        resume_id: resumeId === "" ? null : resumeId,
+        current_stage_id: currentStageId === "" ? null : currentStageId,
+      };
       const updated = await apiSend<Job>(`/api/jobs/${jid}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ resume_id: rid === "" ? null : rid }),
+        body: JSON.stringify(body),
       });
       setJob(updated);
+      setCompany(updated.company);
+      setTitle(updated.title);
+      setSalary(updated.salary);
+      setPublishedDate(toDateInputValue(updated.published_at));
+      setJdSourceUrl(updated.jd_source_url ?? "");
+      setFetchStatus(updated.jd_fetch_status === "ok" ? "ok" : "failed");
+      setJdText(updated.jd_text);
+      setResumeId(updated.resume_id ?? "");
+      setCurrentStageId(updated.current_stage_id ?? "");
+      setOkMsg("已保存");
+      window.setTimeout(() => setOkMsg(null), 2500);
     } catch (e) {
       setErr(String(e));
+    } finally {
+      setSaving(false);
     }
   }
 
   async function savePipeline() {
     setErr(null);
+    setOkMsg(null);
     const list = stages
       .split(/\r?\n/)
       .map((s) => s.trim())
@@ -94,6 +129,9 @@ export function JobDetailPage() {
         body: JSON.stringify({ stages: list }),
       });
       setJob(updated);
+      setCurrentStageId(updated.current_stage_id ?? "");
+      setOkMsg("流水线已更新");
+      window.setTimeout(() => setOkMsg(null), 2500);
     } catch (e) {
       setErr(String(e));
     }
@@ -109,79 +147,158 @@ export function JobDetailPage() {
   }
 
   return (
-    <div className="page">
+    <div className="page job-detail-page">
       <p>
         <Link to="/jobs">← 列表</Link>
       </p>
       <h1>
-        {job.company} — {job.title}
+        {(title || company).trim()
+          ? [company, title].filter(Boolean).join(" — ")
+          : `岗位 #${jid}`}
       </h1>
-      <p style={{ color: "#666" }}>
-        JD 抓取状态：
-        {job.jd_fetch_status === "ok" ? "成功" : "失败"}（可在下方粘贴正文兜底）
+      <p className="job-detail-page__lede">
+        爬取结果可能不完整，可在下方逐项修正；保存后一键优化与列表展示均使用此处数据。
       </p>
-      {err ? <p className="err">{err}</p> : null}
+      {err ? (
+        <p className="err" role="alert">
+          {err}
+        </p>
+      ) : null}
+      {okMsg ? (
+        <p className="job-detail-page__ok" role="status">
+          {okMsg}
+        </p>
+      ) : null}
 
-      <div className="card job-detail-meta">
+      <div className="card job-detail-edit">
         <h2 className="resume-list-page__section-title">职位信息</h2>
-        <dl className="job-meta-grid">
-          <div>
-            <dt>薪资</dt>
-            <dd>{job.salary?.trim() ? job.salary : "—"}</dd>
+        <div className="job-detail-form">
+          <div className="job-detail-form__field">
+            <label htmlFor="job-co">公司</label>
+            <input
+              id="job-co"
+              type="text"
+              value={company}
+              onChange={(e) => setCompany(e.target.value)}
+              autoComplete="organization"
+            />
           </div>
-          <div>
-            <dt>发布时间（解析）</dt>
-            <dd>{formatPublished(job.published_at)}</dd>
+          <div className="job-detail-form__field">
+            <label htmlFor="job-ti">职位名称</label>
+            <input
+              id="job-ti"
+              type="text"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+            />
           </div>
-          <div className="job-meta-grid__full">
-            <dt>JD 来源</dt>
-            <dd>
-              {job.jd_source_url ? (
-                <a href={job.jd_source_url} target="_blank" rel="noreferrer">
-                  {job.jd_source_url}
-                </a>
-              ) : (
-                "—"
-              )}
-            </dd>
+          <div className="job-detail-form__field">
+            <label htmlFor="job-sal">薪资</label>
+            <input
+              id="job-sal"
+              type="text"
+              placeholder="如：25-35万/年、面议"
+              value={salary}
+              onChange={(e) => setSalary(e.target.value)}
+            />
           </div>
-        </dl>
-      </div>
-
-      <div className="card">
-        <label>关联简历</label>
-        <select
-          value={job.resume_id ?? ""}
-          onChange={(e) =>
-            linkResume(e.target.value ? Number(e.target.value) : "")
-          }
-        >
-          <option value="">未关联</option>
-          {resumes.map((r) => (
-            <option key={r.id} value={r.id}>
-              {r.title || `#${r.id}`}
-            </option>
-          ))}
-        </select>
-      </div>
-
-      <div className="card">
-        <label htmlFor="jd">JD 正文（可粘贴兜底）</label>
-        <textarea
-          id="jd"
-          rows={12}
-          value={jd}
-          onChange={(e) => setJd(e.target.value)}
-        />
-        <div style={{ marginTop: "0.5rem" }}>
-          <button type="button" className="primary" onClick={saveJd}>
-            保存 JD
+          <div className="job-detail-form__field">
+            <label htmlFor="job-pub">发布时间</label>
+            <input
+              id="job-pub"
+              type="date"
+              value={publishedDate}
+              onChange={(e) => setPublishedDate(e.target.value)}
+            />
+            <span className="resume-list-page__hint">
+              留空表示未填写或清除解析日期
+            </span>
+          </div>
+          <div className="job-detail-form__field job-detail-form__field--full">
+            <label htmlFor="job-url">JD 页面 URL</label>
+            <input
+              id="job-url"
+              type="url"
+              placeholder="https://"
+              value={jdSourceUrl}
+              onChange={(e) => setJdSourceUrl(e.target.value)}
+            />
+          </div>
+          <div className="job-detail-form__field">
+            <label htmlFor="job-fs">抓取状态（手工）</label>
+            <select
+              id="job-fs"
+              value={fetchStatus}
+              onChange={(e) =>
+                setFetchStatus(e.target.value as "ok" | "failed")
+              }
+            >
+              <option value="failed">失败 — 内容多为手动粘贴</option>
+              <option value="ok">成功 — 正文来自页面抓取</option>
+            </select>
+          </div>
+          <div className="job-detail-form__field">
+            <label htmlFor="job-res">关联简历</label>
+            <select
+              id="job-res"
+              value={resumeId === "" ? "" : String(resumeId)}
+              onChange={(e) =>
+                setResumeId(e.target.value ? Number(e.target.value) : "")
+              }
+            >
+              <option value="">未关联</option>
+              {resumes.map((r) => (
+                <option key={r.id} value={r.id}>
+                  {r.title || `#${r.id}`}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="job-detail-form__field">
+            <label htmlFor="job-stage">当前阶段 ID</label>
+            <input
+              id="job-stage"
+              type="number"
+              min={1}
+              step={1}
+              placeholder="保存流水线后填写"
+              value={currentStageId === "" ? "" : currentStageId}
+              onChange={(e) => {
+                const v = e.target.value;
+                setCurrentStageId(v === "" ? "" : Number(v));
+              }}
+            />
+            <span className="resume-list-page__hint">
+              与下方流水线阶段对应；不确定可留空
+            </span>
+          </div>
+          <div className="job-detail-form__field job-detail-form__field--full">
+            <label htmlFor="jd-body">JD 正文</label>
+            <textarea
+              id="jd-body"
+              rows={14}
+              value={jdText}
+              onChange={(e) => setJdText(e.target.value)}
+              placeholder="抓取失败时在此粘贴完整 JD；一键优化依赖此正文。"
+            />
+          </div>
+        </div>
+        <div className="job-detail-edit__actions">
+          <button
+            type="button"
+            className="primary"
+            onClick={() => void saveJobFields()}
+            disabled={saving}
+            aria-busy={saving}
+          >
+            {saving ? "保存中…" : "保存职位与 JD"}
           </button>
         </div>
       </div>
 
       <div className="card">
-        <label htmlFor="st">面试阶段（每行一个）</label>
+        <h2 className="resume-list-page__section-title">面试流水线</h2>
+        <label htmlFor="st">阶段名称（每行一个）</label>
         <textarea
           id="st"
           rows={5}
@@ -194,7 +311,7 @@ export function JobDetailPage() {
           </button>
         </div>
         <p style={{ fontSize: "0.9rem", color: "#666" }}>
-          当前阶段 ID：{job.current_stage_id ?? "无"}
+          服务端当前阶段 ID：{job.current_stage_id ?? "无"}
         </p>
       </div>
 
