@@ -9,6 +9,8 @@ from sqlalchemy.orm import Session, sessionmaker
 from app.db.base import Base
 from app.services.paths import get_data_dir, sqlite_url
 
+import app.db.models  # noqa: F401  — register ORM mappers with Base.metadata
+
 
 def make_engine(database_url: str | None = None):
     url = database_url or sqlite_url(get_data_dir())
