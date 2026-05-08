@@ -15,7 +15,7 @@ from app.services import fetch_html
 from app.services.interview_index import delete_by_source_id as chroma_delete_source
 from app.services.interview_index import index_source
 from app.services.paths import get_data_dir
-from app.services.settings_file import load_settings_json
+from app.services.user_config import effective_embedding_config
 
 router = APIRouter()
 
@@ -29,17 +29,8 @@ def _preview(body: str) -> str:
     return body[:PREVIEW_LEN] + "…"
 
 
-def _embedding_triplet(settings: Settings) -> tuple[str, str | None, str]:
-    j = load_settings_json()
-    api_key = (j.get("embedding_api_key") or "").strip() or settings.embedding_api_key
-    base_raw = (j.get("embedding_base_url") or "").strip() or settings.embedding_base_url
-    model = (j.get("embedding_model") or "").strip() or settings.embedding_model
-    base_url = base_raw or None
-    return api_key, base_url, model
-
-
 def _require_embedding(settings: Settings) -> tuple[str, str | None, str]:
-    api_key, base_url, model = _embedding_triplet(settings)
+    api_key, base_url, model = effective_embedding_config(settings)
     if not api_key.strip() or not model.strip():
         raise HTTPException(status_code=400, detail="未配置 Embedding：请在环境变量或 settings.json 中设置 embedding_api_key 与 embedding_model")
     return api_key, base_url, model

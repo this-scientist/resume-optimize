@@ -8,6 +8,9 @@ class Settings(BaseSettings):
     embedding_base_url: str = ""
     embedding_api_key: str = ""
     embedding_model: str = ""
+    chat_base_url: str = ""
+    chat_api_key: str = ""
+    chat_model: str = ""
 
 
 def get_settings() -> Settings:
