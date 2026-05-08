@@ -49,7 +49,7 @@ npm run dev
 
 备份时复制整个数据目录即可。
 
-升级后端后若 SQLite 出现「缺少列」类错误，可**关闭应用后删除** `app.sqlite3` 再启动（会清空本地库表数据；Chroma 如需一致可一并删掉 `chroma` 目录）。
+升级后端时，启动会自动对旧版 `job_postings` 表执行 `ADD COLUMN`（如 `salary`、`published_at`）。若仍报库结构错误，可**关闭应用后删除** `app.sqlite3` 再启动（会清空本地表数据；Chroma 可一并删 `chroma` 目录）。
 
 ## 手动冒烟（建议）
 

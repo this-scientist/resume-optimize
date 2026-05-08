@@ -20,12 +20,15 @@ type Resume = { id: number; title: string };
 
 function toDateInputValue(iso: string | null): string {
   if (!iso) return "";
+  // 使用日期段，避免带 T 的 ISO 被按 UTC 解析后错一天
+  const m = /^(\d{4}-\d{2}-\d{2})/.exec(iso);
+  if (m) return m[1];
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return "";
   const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const mo = String(d.getMonth() + 1).padStart(2, "0");
   const day = String(d.getDate()).padStart(2, "0");
-  return `${y}-${m}-${day}`;
+  return `${y}-${mo}-${day}`;
 }
 
 export function JobDetailPage() {
@@ -72,7 +75,8 @@ export function JobDetailPage() {
 
   function publishedAtPayload(): string | null {
     if (!publishedDate.trim()) return null;
-    return `${publishedDate.trim()}T00:00:00`;
+    // 仅传 YYYY-MM-DD，由后端解析为当天 0 点（无时区歧义）
+    return publishedDate.trim();
   }
 
   async function saveJobFields() {

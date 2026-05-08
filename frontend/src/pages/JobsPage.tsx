@@ -22,6 +22,11 @@ type JobRow = {
 
 function formatPublished(iso: string | null): string {
   if (!iso) return "—";
+  const prefix = /^(\d{4}-\d{2}-\d{2})/.exec(iso);
+  if (prefix) {
+    const [y, mo, day] = prefix[1].split("-").map(Number);
+    return new Date(y, mo - 1, day).toLocaleDateString("zh-CN");
+  }
   try {
     const d = new Date(iso);
     if (Number.isNaN(d.getTime())) return "—";
