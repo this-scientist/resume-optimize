@@ -1,4 +1,17 @@
+from types import SimpleNamespace
+
 from app.services.optimize_resume import build_optimize_user_message
+
+
+async def _fake_fetch_job(_url: str, retain_html: bool = False):
+    body = "岗位职责..." * 50
+    return SimpleNamespace(
+        ok=True,
+        title="职位-公司-X",
+        text=body,
+        error=None,
+        raw_html=f"<html>{body}</html>" if retain_html else None,
+    )
 
 
 def test_build_optimize_user_message_includes_sections():
@@ -19,9 +32,16 @@ def test_optimize_endpoint_mocked(client, monkeypatch):
     monkeypatch.setenv("RESUME_OPTIMIZER_CHAT_API_KEY", "ck")
     monkeypatch.setenv("RESUME_OPTIMIZER_CHAT_MODEL", "cm")
 
+    monkeypatch.setattr(
+        "app.api.routes.jobs.fetch_html.fetch_and_extract",
+        _fake_fetch_job,
+    )
+
     rid = client.post("/api/resumes/", json={"current_body_md": "# Me"}).json()["id"]
-    jid = client.post("/api/jobs/", json={"company": "c"}).json()["id"]
-    client.patch(f"/api/jobs/{jid}", json={"jd_text": "岗位职责..." * 50})
+    jid = client.post(
+        "/api/jobs/",
+        json={"jd_source_url": "https://example.com/j"},
+    ).json()["id"]
 
     monkeypatch.setattr(
         "app.services.optimize_resume.embed_chunks",

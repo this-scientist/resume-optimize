@@ -7,11 +7,25 @@ type Job = {
   id: number;
   company: string;
   title: string;
+  salary: string;
+  published_at: string | null;
+  jd_source_url: string | null;
   jd_text: string;
   jd_fetch_status: string;
   resume_id: number | null;
   current_stage_id: number | null;
 };
+
+function formatPublished(iso: string | null): string {
+  if (!iso) return "—";
+  try {
+    const d = new Date(iso);
+    if (Number.isNaN(d.getTime())) return "—";
+    return d.toLocaleDateString("zh-CN");
+  } catch {
+    return "—";
+  }
+}
 
 type Resume = { id: number; title: string };
 
@@ -103,9 +117,36 @@ export function JobDetailPage() {
         {job.company} — {job.title}
       </h1>
       <p style={{ color: "#666" }}>
-        JD 抓取状态：{job.jd_fetch_status}
+        JD 抓取状态：
+        {job.jd_fetch_status === "ok" ? "成功" : "失败"}（可在下方粘贴正文兜底）
       </p>
       {err ? <p className="err">{err}</p> : null}
+
+      <div className="card job-detail-meta">
+        <h2 className="resume-list-page__section-title">职位信息</h2>
+        <dl className="job-meta-grid">
+          <div>
+            <dt>薪资</dt>
+            <dd>{job.salary?.trim() ? job.salary : "—"}</dd>
+          </div>
+          <div>
+            <dt>发布时间（解析）</dt>
+            <dd>{formatPublished(job.published_at)}</dd>
+          </div>
+          <div className="job-meta-grid__full">
+            <dt>JD 来源</dt>
+            <dd>
+              {job.jd_source_url ? (
+                <a href={job.jd_source_url} target="_blank" rel="noreferrer">
+                  {job.jd_source_url}
+                </a>
+              ) : (
+                "—"
+              )}
+            </dd>
+          </div>
+        </dl>
+      </div>
 
       <div className="card">
         <label>关联简历</label>

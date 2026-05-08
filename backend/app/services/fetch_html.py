@@ -16,6 +16,7 @@ class FetchResult:
     title: str | None
     text: str
     error: str | None = None
+    raw_html: str | None = None
 
 
 async def _get(url: str):
@@ -23,7 +24,7 @@ async def _get(url: str):
         return await client.get(url)
 
 
-async def fetch_and_extract(url: str) -> FetchResult:
+async def fetch_and_extract(url: str, *, retain_html: bool = False) -> FetchResult:
     try:
         resp = await _get(url)
     except Exception as exc:
@@ -47,7 +48,13 @@ async def fetch_and_extract(url: str) -> FetchResult:
         meta = extract_metadata(html, default_url=url)
         title = meta.title if meta else None
     except Exception as exc:
-        return FetchResult(ok=False, title=None, text="", error=str(exc))
+        return FetchResult(
+            ok=False,
+            title=None,
+            text="",
+            error=str(exc),
+            raw_html=html if retain_html else None,
+        )
 
     if len(text.strip()) < MIN_EXTRACTED_TEXT_CHARS:
         return FetchResult(
@@ -55,6 +62,13 @@ async def fetch_and_extract(url: str) -> FetchResult:
             title=title,
             text=text,
             error=f"extracted text shorter than {MIN_EXTRACTED_TEXT_CHARS} characters",
+            raw_html=html if retain_html else None,
         )
 
-    return FetchResult(ok=True, title=title, text=text, error=None)
+    return FetchResult(
+        ok=True,
+        title=title,
+        text=text,
+        error=None,
+        raw_html=html if retain_html else None,
+    )

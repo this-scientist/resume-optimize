@@ -8,6 +8,7 @@ from app.db import models
 from app.deps import get_db
 from app.schemas.job import JobCreate, JobPatch, JobRead, PipelinePut
 from app.services import fetch_html
+from app.services.job_metadata import parse_job_fields
 
 router = APIRouter(prefix="/jobs", tags=["jobs"])
 
@@ -20,18 +21,26 @@ def list_jobs(db: Session = Depends(get_db)):
 
 @router.post("/", response_model=JobRead)
 async def create_job(body: JobCreate, db: Session = Depends(get_db)):
-    jd_text = ""
-    jd_fetch_status = "failed"
-    if body.jd_source_url:
-        fr = await fetch_html.fetch_and_extract(body.jd_source_url)
-        if fr.ok:
-            jd_text = fr.text
-            jd_fetch_status = "ok"
+    url = body.jd_source_url
+    fr = await fetch_html.fetch_and_extract(url, retain_html=True)
+
+    hints = parse_job_fields(fr.raw_html or "", fr.text, fr.title)
+    company = hints.company
+    title = hints.job_title or (fr.title or "")[:255]
+
+    if fr.ok:
+        jd_text = fr.text
+        jd_fetch_status = "ok"
+    else:
+        jd_text = fr.text or ""
+        jd_fetch_status = "failed"
 
     job = models.JobPosting(
-        company=body.company,
-        title=body.title,
-        jd_source_url=body.jd_source_url,
+        company=company,
+        title=title,
+        salary=hints.salary,
+        published_at=hints.published_at,
+        jd_source_url=url,
         jd_text=jd_text,
         jd_fetch_status=jd_fetch_status,
         resume_id=body.resume_id,

@@ -40,6 +40,8 @@ class JobPosting(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     company: Mapped[str] = mapped_column(String(255), default="")
     title: Mapped[str] = mapped_column(String(255), default="")
+    salary: Mapped[str] = mapped_column(String(128), default="")
+    published_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     jd_source_url: Mapped[str | None] = mapped_column(String(2048), nullable=True)
     jd_text: Mapped[str] = mapped_column(Text, default="")
     jd_fetch_status: Mapped[str] = mapped_column(String(16), default="failed")  # ok | failed
