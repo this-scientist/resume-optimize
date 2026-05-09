@@ -2,6 +2,11 @@
 
 在 `127.0.0.1` 运行的简历优化 Web 应用：FastAPI 后端 + Vite/React 前端，数据落 SQLite 与 Chroma，支持面试知识入库、多份简历 Markdown、岗位 JD、流水线阶段与**一键优化**（后台多阶段 LLM 编排，对用户单入口）。
 
+### 近期更新（与本仓库当前代码一致）
+
+- **批量面试知识**：入口页「导入 URL」支持从一个起始页 **发现同站链接**（`POST /api/interview-sources/discover-links`），勾选后 **批量抓取**（`POST /api/interview-sources/batch`），再 **批量确认建索引**（`POST /api/interview-sources/batch-confirm`）。批量抓取时相邻两次请求之间按正文长度与 `BATCH_CRAWL_*` 自动间隔，减轻对站点的瞬时压力（实现见 `services/crawl_pacing.py`，仅用于批量路由）。
+- **模块**：`services/discover_links.py`（解析页面中的同域链接）、`services/crawl_pacing.py`（间隔计算）；对应测试见 `backend/tests/test_discover_links.py`、`test_crawl_pacing.py`。
+
 ---
 
 ## 依赖环境
@@ -100,6 +105,8 @@ npm run dev
 | `services/embeddings.py` | `FlagModel`：`encode_corpus` 建索引，`encode_queries` 检索；中文模型默认检索指令见 FlagEmbedding 文档。 |
 | `services/chroma_store.py` | Chroma 持久化；**按当前嵌入模型名分集合**（`interview_knowledge__<模型名>`），避免不同向量维度混写；旧数据可能在固定名 `interview_knowledge`；`InterviewSource.embedding_model` 记录建索引用模型。 |
 | `services/interview_index.py` | 将某条 `InterviewSource` 正文分块、嵌入并写入 Chroma。 |
+| `services/discover_links.py` | 给定起始 URL，抓取 HTML 并抽取同域链接供批量导入勾选。 |
+| `services/crawl_pacing.py` | 批量抓取时间间隔（字数 × 每分钟字数 → 半速率间隔 + 抖动）。 |
 | `services/optimize_resume.py` | 一键优化入口：拉 JD、简历，检索面试片段，调用下游图编排。 |
 | `services/optimize_graph.py` | **LangGraph** 线性四节点流水线（对用户不可见）：JD 结构化拆解 → 人岗差距分析 → 简历重写 → 面试钩子融合；每步一次 `complete_chat`，最终产出 Markdown 简历正文。 |
 | `services/chat_models.py` | OpenAI 兼容 `chat.completions` 封装。 |
@@ -114,6 +121,7 @@ npm run dev
 ### 前端（`frontend/src/`）
 
 - **React Router**：简历列表/编辑、岗位列表/详情、面试知识列表/导入/粘贴/详情、设置页等。
+- **面试知识导入**：`KnowledgeImportPage` 提供「发现链接 → 勾选 URL → 批量拉取 → 批量确认建索引」流程（与上述 REST 端点对应）。
 - **API**：`src/api/client.ts` 使用 `VITE_API_BASE`（可选）；开发时依赖 Vite 代理 `/api`。
 
 ### 数据与备份
@@ -147,6 +155,11 @@ npm run dev
 | `EMBEDDING_MODEL` | 本地 BGE 模型名（默认 `BAAI/bge-small-zh-v1.5`） |
 | `EMBEDDING_USE_FP16` | 是否 FP16 推理（默认 true） |
 | `CHAT_API_KEY` / `CHAT_MODEL` / `CHAT_BASE_URL` | OpenAI 兼容 Chat 接口 |
+| `BATCH_CRAWL_CHARS_PER_MINUTE` | 批量抓页时假设的阅读速度（字/分，默认 400） |
+| `BATCH_CRAWL_MIN_DELAY_SEC` / `BATCH_CRAWL_MAX_DELAY_SEC` | 相邻两次抓取间隔下限 / 上限（秒，默认 2～120） |
+| `BATCH_CRAWL_JITTER_RATIO` | 间隔随机抖动比例（0～0.45，默认 0.1） |
+
+批量抓取间隔公式：**间隔 ≈（上一页正文字数 ÷ 每分钟字数 × 60 秒）÷ 2**，再夹在最小、最大间隔之间并加抖动。
 
 `EMBEDDING_API_KEY` / `EMBEDDING_BASE_URL` 已不再参与本地向量计算，仅兼容设置表单。
 

@@ -228,6 +228,75 @@ a.primary:hover {
   color: var(--color-ink-muted);
 }
 
+.knowledge-import__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+  margin-top: 0.75rem;
+}
+
+.knowledge-import__discover h2 {
+  margin: 0 0 0.5rem;
+  font-size: 1.05rem;
+}
+
+.knowledge-import__hint {
+  margin: 0 0 0.75rem;
+  font-size: 0.88rem;
+  color: var(--color-ink-muted);
+}
+
+.knowledge-import__toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+  margin-bottom: 0.75rem;
+}
+
+.knowledge-import__table-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  background: #fffdf9;
+}
+
+.knowledge-import__table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.88rem;
+}
+
+.knowledge-import__table th,
+.knowledge-import__table td {
+  padding: 0.45rem 0.6rem;
+  border-bottom: 1px solid var(--color-border);
+  text-align: left;
+  vertical-align: top;
+}
+
+.knowledge-import__table th {
+  background: #f4efe6;
+  font-weight: 650;
+}
+
+.knowledge-import__url-cell {
+  word-break: break-all;
+  max-width: 28rem;
+}
+
+.knowledge-import__empty {
+  margin: 0.75rem 0;
+  color: var(--color-ink-muted);
+}
+
+.knowledge-import__batch-summary {
+  margin: 0 0 1rem;
+  padding-left: 1.2rem;
+  font-size: 0.9rem;
+  line-height: 1.45;
+}
+
 .btn-secondary {
   flex-shrink: 0;
   padding: 0.5rem 0.85rem;

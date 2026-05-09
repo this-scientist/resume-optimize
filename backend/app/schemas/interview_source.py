@@ -50,3 +50,26 @@ class InterviewSourceConfirmResult(BaseModel):
     id: int
     index_status: str
     detail: str | None = None
+
+
+class DiscoverLinksBody(BaseModel):
+    url: str = Field(..., min_length=4)
+    max_links: int = Field(80, ge=10, le=200)
+
+
+class DiscoveredLinkOut(BaseModel):
+    url: str
+    label: str | None = None
+
+
+class DiscoverLinksResponse(BaseModel):
+    base_url: str
+    links: list[DiscoveredLinkOut]
+
+
+class InterviewSourceBatchCreate(BaseModel):
+    urls: list[str] = Field(..., min_length=1, max_length=60)
+
+
+class BatchConfirmBody(BaseModel):
+    source_ids: list[int] = Field(..., min_length=1, max_length=60)

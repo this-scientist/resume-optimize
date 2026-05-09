@@ -4,7 +4,7 @@ import os
 from pathlib import Path
 from typing import Self
 
-from pydantic import model_validator
+from pydantic import Field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 _BACKEND_DIR = Path(__file__).resolve().parent.parent
@@ -52,6 +52,12 @@ class Settings(BaseSettings):
     chat_base_url: str = ""
     chat_api_key: str = ""
     chat_model: str = ""
+
+    # 批量 URL 抓取「类人节奏」：上一页正文字符数 → 估算阅读时间 → 间隔 = 阅读时间/2（见 crawl_pacing）
+    batch_crawl_chars_per_minute: float = Field(default=400.0, ge=60.0, le=8000.0)
+    batch_crawl_min_delay_sec: float = Field(default=2.0, ge=0.5, le=120.0)
+    batch_crawl_max_delay_sec: float = Field(default=120.0, ge=2.0, le=3600.0)
+    batch_crawl_jitter_ratio: float = Field(default=0.1, ge=0.0, le=0.45)
 
     @model_validator(mode="after")
     def apply_env_aliases(self) -> Self:
